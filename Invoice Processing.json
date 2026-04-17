@@ -1,0 +1,726 @@
+{
+  "name": "Invoice Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "sender": "zakeenkhann@gmail.com"
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "id": "d7b714ce-6b4d-40cb-9e25-b422e24222a8",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "position": [
+        16,
+        336
+      ],
+      "typeVersion": 1.3,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "d15u6YZ0U9MjgoqB",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment_0",
+        "options": {}
+      },
+      "id": "7b6132e0-097a-4f08-98c0-1d1036347f4c",
+      "name": "Extract from File",
+      "type": "n8n-nodes-base.extractFromFile",
+      "position": [
+        240,
+        336
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"order_id\": \"\",\n  \"sku\": \"\",\n  \"customer_name\": \"\",\n  \"email\": \"\",\n  \"phone\": \"\",\n  \"item_name\": \"\",\n  \"quantity\": \"\",\n  \"price\": \"\",\n  \"total\": \"\"\n}\n\n"
+      },
+      "id": "8593c685-9558-4bcd-8b42-31ee80c0f406",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        608,
+        560
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "sendTo": "zakeenkhann@gmail.com",
+        "subject": "=Purchase Requisition Request – {{ $json['item name'] }} / {{ $json['SKU / Item Code'] }}",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body {\n      font-family: Arial, sans-serif;\n      color: #333333;\n      line-height: 1.6;\n    }\n    .container {\n      padding: 20px;\n      background-color: #f9f9f9;\n    }\n    .header {\n      font-size: 18px;\n      font-weight: bold;\n      margin-bottom: 15px;\n    }\n    .section {\n      margin-bottom: 15px;\n      background-color: #ffffff;\n      padding: 15px;\n      border-radius: 5px;\n      border: 1px solid #dddddd;\n    }\n    .section h3 {\n      margin: 0 0 10px 0;\n      font-size: 16px;\n      color: #555555;\n    }\n    .section p {\n      margin: 5px 0;\n    }\n    .footer {\n      font-size: 14px;\n      color: #777777;\n      margin-top: 20px;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      Purchase Requisition Request\n    </div>\n    \n    <div class=\"section\">\n      <h3>Item Details</h3>\n      <p><strong>Item Name:</strong> {{ $json['item name'] }}</p>\n      <p><strong>SKU / Item Code:</strong> {{ $json['SKU / Item Code'] }}</p>\n      <p><strong>Current Quantity:</strong> {{ $json['Current Quantity'] }}</p>\n      <p><strong>Requested Quantity:</strong> {{ $json['Quantity Requested'] }}</p>\n      <p><strong>Priority:</strong> {{ $json['Priority'] }}</p>\n    </div>\n    \n    <div class=\"section\">\n      <h3>Request Summary</h3>\n      <p>This item is required to ensure uninterrupted operations and maintain inventory levels. Kindly prioritize this requisition and process it at the earliest convenience.</p>\n      <p>Please let me know if any additional information or approval is required to expedite this request.</p>\n    </div>\n    \n    <div class=\"footer\">\n      Thank you for your attention.<br>\n    </div>\n  </div>\n</body>\n</html>\n",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "73af2e84-5035-465a-931d-b797ecc89eb8",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        1712,
+        240
+      ],
+      "webhookId": "d189142b-df94-4a57-8892-a08e4fdb62e8",
+      "typeVersion": 2.1,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "d15u6YZ0U9MjgoqB",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an AI invoice data extractor.\n\nYour task is to extract structured data from an invoice document.\n\nExtract the following fields:\n\n- order_id (this is the invoice number)\n- sku\n- customer_name\n- email (if available, otherwise null)\n- phone (if available, otherwise null)\n- item_name\n- quantity\n- price (unit price)\n- total (total price for the item OR full invoice total if only one item exists)\n\nReturn ONLY valid JSON in the following format:\n\n{\n  \"order_id\": \"\",\n  \"sku\": \"\",\n  \"customer_name\": \"\",\n  \"email\": \"\",\n  \"phone\": \"\",\n  \"item_name\": \"\",\n  \"quantity\": \"\",\n  \"price\": \"\",\n  \"total\": \"\"\n}\n\nRules:\n- Do NOT return any explanation\n- Do NOT add extra text\n- Always return a single JSON object (NOT an array)\n- If multiple items exist, return ONLY the FIRST item\n- If a field is missing, return null\n- Extract values exactly as written in the document\n- Keep all values as strings (IMPORTANT)"
+        }
+      },
+      "id": "cff13697-2718-4130-8631-41576df420df",
+      "name": "Extract Invoice Record",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        464,
+        336
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck",
+          "mode": "list",
+          "cachedResultName": "Order Procurement",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Customer Orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Order id": "={{ $json.output.order_id }}",
+            "SKU": "={{ $json.output.sku }}",
+            "Customer Name": "={{ $json.output.customer_name }}",
+            "Email": "={{ $json.output.email }}",
+            "Phone": "={{ $json.output.phone }}",
+            "Item Name": "={{ $json.output.item_name }}",
+            "Quantity": "={{ $json.output.quantity }}",
+            "Price": "={{ $json.output.price }}",
+            "Total": "={{ $json.output.total }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Order id",
+              "displayName": "Order id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SKU",
+              "displayName": "SKU",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Item Name",
+              "displayName": "Item Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Quantity",
+              "displayName": "Quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "8ddc5faf-3673-4338-b954-10807f048bb1",
+      "name": "Sales Order Creation",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        800,
+        336
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "EuDtja46IPMzArPi",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck",
+          "mode": "list",
+          "cachedResultName": "Order Procurement",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1611732877,
+          "mode": "list",
+          "cachedResultName": "Product Inventry",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck/edit#gid=1611732877"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Item Name",
+              "lookupValue": "={{ $json['Item Name'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7a3907dc-9bf8-4c8c-b860-8396bc06adc3",
+      "name": "Stock & Shortage Check",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1072,
+        336
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "EuDtja46IPMzArPi",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "760d94b6-2836-4058-8a0d-6dcd149ad4b9",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json['Stock '] }}",
+              "rightValue": "out of Stock"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e2f0e846-c4ed-4b8e-97e4-993adc65f245",
+      "name": "If Negative",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1264,
+        336
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck",
+          "mode": "list",
+          "cachedResultName": "Order Procurement",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 571411701,
+          "mode": "list",
+          "cachedResultName": "Purchase Requisition",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck/edit#gid=571411701"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "SKU / Item Code": "={{ $('Sales Order Creation').item.json.SKU }}",
+            "Current Quantity": "={{ $json['Stock '] }}",
+            "Quantity Requested": "={{ $('Sales Order Creation').item.json.Quantity }}",
+            "Request Date": "2026-02-11",
+            "item name": "={{ $('Sales Order Creation').item.json['Item Name'] }}",
+            "Priority": "High"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Request Date",
+              "displayName": "Request Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "item name",
+              "displayName": "item name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SKU / Item Code",
+              "displayName": "SKU / Item Code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Current Quantity",
+              "displayName": "Current Quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Quantity Requested",
+              "displayName": "Quantity Requested",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Item Name",
+              "displayName": "Item Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Stock ",
+              "displayName": "Stock ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f878c5cc-f2af-42c5-a711-fc68a687edb4",
+      "name": "Create Purchase Requisition",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1488,
+        240
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "EuDtja46IPMzArPi",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck",
+          "mode": "list",
+          "cachedResultName": "Order Procurement",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1858288315,
+          "mode": "list",
+          "cachedResultName": "Work order Create",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11PSn8YlHKVGjq_JxmJ6pIfTGQDhvBzODLWIHKp9N8ck/edit#gid=1858288315"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "order id": "={{ $('Sales Order Creation').item.json['Order id'] }}",
+            "SKU ": "={{ $('Sales Order Creation').item.json.SKU }}",
+            "item name": "={{ $('Sales Order Creation').item.json['Item Name'] }}",
+            "Customer name": "={{ $('Sales Order Creation').item.json['Customer Name'] }}",
+            "Quantity to Produce": "={{ $('Sales Order Creation').item.json.Quantity }}",
+            "Planned  Due Date": "={{ new Date(new Date().getTime() + 3*24*60*60*1000).toISOString().split('T')[0] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "order id",
+              "displayName": "order id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SKU ",
+              "displayName": "SKU ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "item name",
+              "displayName": "item name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer name",
+              "displayName": "Customer name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Quantity to Produce",
+              "displayName": "Quantity to Produce",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Planned  Due Date",
+              "displayName": "Planned  Due Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "51640f03-a328-4a0d-aae7-bb7ef73fc739",
+      "name": "Create  Work  Order",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1488,
+        544
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "EuDtja46IPMzArPi",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0A7E2LJ7EZ",
+          "mode": "list",
+          "cachedResultName": "all-zakeen"
+        },
+        "text": "=*📋 Work Order Summary*\n\n• *Order ID:* {{ $json['order id'] }}\n  - SKU: {{ $json['SKU '] }}\n  - Item Name: {{ $json['item name'] }}\n  - Customer: {{ $json['Customer name'] }}\n  - Quantity to Produce: {{ $json['Quantity to Produce'] }}\n  - Planned Due Date: {{ $json['Planned  Due Date'] }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "46dcc330-2e91-414b-acc1-32bbc73b8332",
+      "name": "Send Order Summary",
+      "type": "n8n-nodes-base.slack",
+      "position": [
+        1712,
+        544
+      ],
+      "webhookId": "15f1f481-e0b5-46cf-abd1-923bcbfc2179",
+      "typeVersion": 2.3,
+      "credentials": {
+        "slackApi": {
+          "id": "JT9eetCzngm3Nu7l",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemma-4-26b-a4b-it",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        464,
+        560
+      ],
+      "id": "5e5b1423-f467-4406-aa28-dc1fe7d37147",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "IdmXgmOBmWfXDYdp",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Extract Invoice Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extract Invoice Record",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Invoice Record": {
+      "main": [
+        [
+          {
+            "node": "Sales Order Creation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sales Order Creation": {
+      "main": [
+        [
+          {
+            "node": "Stock & Shortage Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stock & Shortage Check": {
+      "main": [
+        [
+          {
+            "node": "If Negative",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Negative": {
+      "main": [
+        [
+          {
+            "node": "Create Purchase Requisition",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create  Work  Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Purchase Requisition": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create  Work  Order": {
+      "main": [
+        [
+          {
+            "node": "Send Order Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Invoice Record",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "abf2fa41-f442-4eb2-8dde-9cc25e29de4d",
+  "meta": {
+    "instanceId": "8ff45a24ef29b99f02c9f5629206e8dd9dcf014485731621b131805abfdf8a84"
+  },
+  "id": "jCrvGn00sUQXXhee",
+  "tags": []
+}
